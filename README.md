@@ -6,23 +6,20 @@ This is the backend API for the Transportation App, built with Node.js, Express,
 
 ## Installation
 
-1. **Clone the repository:**
-
-```bash
+# Clone the repository
 git clone https://github.com/yourusername/tranportationAppAPI.git
 cd tranportationAppAPI
 
-
-Install dependencies:
+# Install dependencies
 npm install
 
-Set up environment variables:
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+# Set up environment variables
+# Create a .env file in the project root with the following content:
+# DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
 
-
-Run Prisma migrations:
+# Run Prisma migrations
 npx prisma migrate dev --name init
 
-
-Start the development server:
+# Start the development server
 npm run server
+
