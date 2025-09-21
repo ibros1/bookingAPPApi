@@ -27,6 +27,7 @@ passport.use(
       if (!user) {
         user = await prisma.user.create({
           data: {
+            googleId: profile.id,
             name: profile.displayName,
             email: profile.emails![0].value,
             profilePhoto: profile.photos![0].value, // save profile photo

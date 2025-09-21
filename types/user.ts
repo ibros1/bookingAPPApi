@@ -5,7 +5,7 @@ export interface iCreatedUser {
   email?: string;
   phone?: string;
   password: string;
-  isActive: boolean;
+  isActive: boolean | string;
   confirmPassword: string;
   profilePhoto?: string;
 }

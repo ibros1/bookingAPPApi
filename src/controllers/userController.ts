@@ -50,15 +50,16 @@ export const registerUser = async (req: Request, res: Response) => {
     const hashedPassword = await argon2.hash(data.password);
 
     // Upload profile photo if file exists
+    const active = data.isActive === "true" ? true : false;
 
-    // Create user
     const user = await prisma.user.create({
       data: {
         name: data.name,
         phone: data.phone,
         email: data.email,
         password: hashedPassword,
-        isActive: data.isActive,
+        profilePhoto: data.profilePhoto ?? null,
+        isActive: active,
         isVerified: true,
       },
     });

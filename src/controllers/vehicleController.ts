@@ -31,16 +31,33 @@ export const createVehicle = async (req: Request, res: Response) => {
         message: "Vehicle number already exists",
       });
     }
+    const typeCapacityMap: Record<vehicleType, number> = {
+      Hiace: 14,
+      Bus: 40,
+      Taxi: 4,
+      Noah: 20,
+    };
+
+    const capacity = typeCapacityMap[data.name as vehicleType];
+
+    if (!capacity) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: "Unknown vehicle type or capacity not defined",
+      });
+    }
 
     const vehicle = await prisma.vehicle.create({
       data: {
         vehicleNo: data.vehicleNo,
         name: data.name,
         driverId: data.driverId,
+        capacity: capacity,
       },
       include: {
         drivers: {
           select: {
+            id: true,
             name: true,
             email: true,
             phone: true,
@@ -77,6 +94,7 @@ export const getAllVehicles = async (req: Request, res: Response) => {
       include: {
         drivers: {
           select: {
+            id: true,
             name: true,
             email: true,
             phone: true,
@@ -116,6 +134,8 @@ export const getOneVehicle = async (req: Request, res: Response) => {
       include: {
         drivers: {
           select: {
+            id: true,
+
             name: true,
             email: true,
             phone: true,
@@ -177,6 +197,7 @@ export const updateVehicle = async (req: Request, res: Response) => {
       include: {
         drivers: {
           select: {
+            id: true,
             name: true,
             email: true,
             phone: true,
