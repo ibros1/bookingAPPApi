@@ -11,3 +11,6 @@ This is the backend API for the Transportation App, built with Node.js, Express,
 ```bash
 git clone https://github.com/yourusername/tranportationAppAPI.git
 cd tranportationAppAPI
+
+2. **Install dependencies::**
+npm install
