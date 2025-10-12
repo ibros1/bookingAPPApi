@@ -1,20 +1,13 @@
-import { currency, PaymentStatus, paymentType } from "../src/generated/prisma";
+import { Currency, paymentType } from "../src/generated/prisma";
 
-// ---------- BOOKING ----------
 export interface iCreatedBooking {
-  userId: string;
-  scheduleRideId: string;
-  seatIds: string[];
+  bookerId: string;
+  rideId: string;
+  currency: Currency;
   name: string;
   phoneNumber: string;
   amount: number;
   qty: number;
+  total_amount: number;
   paymentType: paymentType;
-  currency: currency;
-  paymentStatus: PaymentStatus;
-}
-
-export interface iUpdatedBooking {
-  id: string;
-  paymentStatus?: PaymentStatus;
 }

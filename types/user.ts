@@ -1,31 +1,31 @@
 import { Role } from "../src/generated/prisma";
 
 export interface iCreatedUser {
-  name?: string;
+  name: string;
   email?: string;
-  phone?: string;
+  phone: string;
   password: string;
-  isActive: boolean | string;
+
   confirmPassword: string;
   profilePhoto?: string;
 }
 
 export interface iUpdatedUser {
   id: string;
-  name?: string;
+  name: string;
   email?: string;
-  phone?: string;
+  phone: string;
+  password: string;
+  profilePhoto?: string;
   isActive: boolean;
-
-  password?: string;
 }
 
 export interface iLoginUser {
-  email: string;
+  phone: string;
   password: string;
 }
 
 export interface iUpdatedRole {
-  id: string;
+  phone: string;
   role: Role;
 }

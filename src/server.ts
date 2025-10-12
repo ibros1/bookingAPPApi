@@ -1,23 +1,26 @@
-import express from "express";
 import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
+import express from "express";
 
 import cors from "cors";
-import session from "express-session";
-import passport from "../config/passport";
 
 import userRoute from "./routes/useRoute";
-import driverRoute from "./routes/driverRoute";
-import vehicleRoute from "./routes/vehicleRoute";
-import accessRoute from "./routes/accessRoute";
 import routeRoute from "./routes/routesRoute";
-import scheduleRoute from "./routes/schedulrRideRoutes";
-import seatRoute from "./routes/seatsRoute";
+import addressRoute from "./routes/addresRoute";
+import ridesRoute from "./routes/ridesRoute";
 import bookingRoute from "./routes/bookingsRoute";
+import hotelRoutes from "./routes/hotelRoute";
+import employeeRoute from "./routes/employeeRoute";
+import messageRoute from "./routes/messagesRoute";
+import activityLogsRoute from "./routes/activityLogs";
+import { initWhatsApp, sendBulkWhatsApp } from "../messaging/whatsApp";
+
 dotenv.config();
 const PORT = process.env.PORT;
 const app = express();
 
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
 // Middleware order is important!
 app.use(
   cors({
@@ -25,21 +28,37 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json()); // This should come before routes
-app.use(cookieParser());
-app.use(session({ secret: "secret", resave: false, saveUninitialized: false }));
-app.use(passport.initialize());
-app.use(passport.session());
+let whatsappReady = false;
 
-// Routes should be registered after body parsing middleware
+// Initialize WhatsApp
+initWhatsApp().then(() => {
+  whatsappReady = true;
+});
+
+app.post("/send-message", async (req, res) => {
+  if (!whatsappReady) {
+    return res.status(400).json({ message: "WhatsApp not ready yet" });
+  }
+
+  const { numbers, message } = req.body;
+
+  try {
+    await sendBulkWhatsApp(numbers, message);
+    res.json({ message: "Messages sent!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to send messages" });
+  }
+});
 app.use("/api/users", userRoute);
-app.use("/api/drivers", driverRoute);
-app.use("/api/vehicles", vehicleRoute);
-app.use("/api/roles", accessRoute);
 app.use("/api/routes", routeRoute);
-app.use("/api/schedules", scheduleRoute);
-app.use("/api/seats", seatRoute);
+app.use("/api/address", addressRoute);
+app.use("/api/hotels", hotelRoutes);
+app.use("/api/rides", ridesRoute);
 app.use("/api/bookings", bookingRoute);
+app.use("/api/employees", employeeRoute);
+app.use("/api/messages", messageRoute);
+app.use("/api/activity-logs", activityLogsRoute);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT} `);

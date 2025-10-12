@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET_KEY } from "../config/config";
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -11,20 +12,33 @@ export const authenticateUser = (
   next: NextFunction
 ) => {
   try {
-    // Read token from cookie
-    const token = req.cookies.auth_token;
-    if (!token) {
-      return res
-        .status(401)
-        .json({ isSuccess: false, message: "No token provided" });
+    const authHeader = req?.headers?.authorization;
+
+    if (!authHeader) {
+      res.status(401).json({
+        isSuccess: false,
+        message: "no token provided",
+      });
+      return;
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY!);
-    req.userId = (decoded as any).userId; // attach userId to request
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      res.status(401).json({
+        isSuccess: false,
+        message: "no token provided",
+      });
+      return;
+    }
+
+    const result: any = jwt.verify(token, process.env.JWT_SECRET_KEY as string);
+    req.userId = result.userId;
     next();
   } catch (err) {
-    console.error("Auth middleware error:", err);
-    return res.status(401).json({ isSuccess: false, message: "Invalid token" });
+    console.log(err);
+    res.status(500).json({
+      isSuccess: false,
+      message: "server error",
+    });
   }
 };

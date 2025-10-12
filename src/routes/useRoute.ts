@@ -6,43 +6,34 @@ import {
   updateRole,
   getAllUsers,
   getOneUser,
-  updateProfile,
   toggleUserActive,
-  googleAuth,
-  googleCallback,
-  logout,
-  refreshToken,
   getMe,
+  getAllOfficers,
+  getAllBookers,
 } from "../controllers/userController";
 
-import passport, { authenticate } from "passport";
 import { authorize } from "../../middleWare/authorize";
 import { authenticateUser } from "../../middleWare/authenticate";
-import upload from "../../middleWare/cloudinaryMiddleware";
 import multer from "multer";
+import { requestOtp, verifyOtp } from "../controllers/authOTP";
 
 const router = Router();
-const uploade = multer();
+const upload = multer();
+
 router.get("/health", (_: Request, res: Response) => {
   res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
-router.post("/create", uploade.single("profilePhoto"), registerUser);
+router.post("/create", upload.single("profilePhoto"), registerUser);
 router.post("/login", loginUser);
 router.put("/update", authenticateUser, authorize(["ADMIN"]), updateUser);
-router.put("/role", updateRole);
+router.put("/update-role", updateRole);
 router.get("/all", getAllUsers);
 router.get(
-  "/getOne/:userId",
+  "/get-one/:userId",
   authenticateUser,
   authorize(["ADMIN"]),
   getOneUser
-);
-router.put(
-  "/profile-update",
-  authenticateUser,
-  upload.single("image"),
-  updateProfile
 );
 router.put(
   "/toggle-active",
@@ -50,12 +41,21 @@ router.put(
   authorize(["ADMIN"]),
   toggleUserActive
 );
-
-// Google auth routes
-router.get("/auth/google", googleAuth);
-router.get("/auth/google/callback", googleCallback);
-router.post("/auth/logout", authenticateUser, logout);
-
 router.get("/me", authenticateUser, getMe);
-router.post("/refresh-token", refreshToken);
+router.get(
+  "/get_officers",
+  authenticateUser,
+  authorize(["ADMIN"]),
+  getAllOfficers
+);
+router.get(
+  "/get_bookers",
+  authenticateUser,
+  authorize(["ADMIN"]),
+  getAllBookers
+);
+// OTP routes
+router.post("/request-otp", requestOtp);
+router.post("/verify-otp", verifyOtp);
+
 export default router;

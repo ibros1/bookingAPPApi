@@ -14,37 +14,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 enum Role {
-  USER
+  
   ADMIN
-  DRIVER
-  CASHIER
-  DISPATCHER
+  BOOKER
+  OFFICER
+  USER
 }
 
 
 model User {
-  id           String   @id @default(cuid())
-  name         String? 
-  email        String?  @unique
-  googleId     String?  @unique
+  id           String    @id @default(uuid())
+  name         String
+  email        String?   @unique
   profilePhoto String?          
-  phone        String?  @unique
-  password     String?
-  role         Role     @default(USER)
-  isVerified   Boolean  @default(false)
-  isActive     Boolean  @default(false)
-  isDriver Boolean @default(false)
-  refreshToken  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  address      String?
+  phone        String    @unique
+  password     String
+  role         Role      @default(USER)
+  isVerified   Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  refreshToken String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   otps         OTP[]  
-  vehicleId String?
-  vehicle Vehicle[]
-  routes Route[]
 
-  scheduleDriverRides scheduleRide[]
-  books Booking[]
+  routes       Route[]
+  adress       address[] @relation("UserAddresses")     // addresses owned by this user
+  officers      address[] @relation("OfficerAddresses")  
+  hotel        hotel[]
+  rides        Ride[]
+  bookings     Booking[]
+  activity     ActivityLog[]
+  emloyee Employee[]
+  messages Message[]
+  messageRecipients MessageRecipient[]
 }
+
 
 model OTP {
   id        String   @id @default(cuid())
@@ -52,29 +57,32 @@ model OTP {
   code      String
   expiresAt DateTime
   createdAt DateTime @default(now())
-  
   user      User     @relation(fields: [userId], references: [id])
 }
-
-enum vehicleType {
-  Hiace
-  Noah
-  Bus
-  Taxi
+model PendingRegistration {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String
+  email     String?
+  address String
+  password  String   
+  createdAt DateTime @default(now())
 }
 
-model Vehicle {
-  id              String           @id @default(cuid())
-  vehicleNo       String //plate car
-  name            vehicleType   
-  driverId String  
-  drivers  User @relation(fields: [driverId], references: [id]) 
-   capacity  Int     
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  scheduleRides scheduleRide[]
-  seats Seats[]
+
+model address {
+  id        String   @id @default(nanoid())
+  address   String
+  userId    String
+  officerId String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user      User     @relation("UserAddresses", fields: [userId], references: [id])
+ officers User[] @relation("OfficerAddresses")
+  hotels    hotel[]
 }
+
 
 model Route {
   id String @id @default(ulid())
@@ -84,60 +92,27 @@ model Route {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   createdUser User @relation(fields: [userId], references: [id])
-  scheduleRides scheduleRide[]
-
-}
-enum Days {
-    SATURDAY
-    SUNDAY
-    MONDAY
-    TUESDAY
-    WEDNESDAY
-    THURSDAY
-    FRIDAY
+  rides Ride[]
 }
 
-model scheduleRide {
+
+
+
+model hotel {
+
   id String @id @default(uuid())
-  routeId String
-  userId String
-  vehicleId String
-  driverId String
-  fareUSD Float
-  fareSLSH Float
-  totalSeats Int
-  takenSeats String[] @default([])
-  startTime DateTime
-  endTime DateTime
-  day Days
+  userId String?
+  name String
+  addressId String
+  bookerId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  route       Route     @relation(fields: [routeId], references: [id])
-  driver      User     @relation( fields: [driverId], references: [id])
-  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
-  bookings Booking[]
-  seats Seats[]
+  booker User? @relation(fields: [bookerId], references: [id])
+  address address @relation(fields: [addressId], references: [id])
 
 }
 
-model Seats {
-  id             String        @id @default(uuid())
-  vehicleId      String?
-  scheduleRideId String
-  seatNumber     Int
-  isBooked       Boolean       @default(false)
-  vehicle        Vehicle? @relation(fields: [vehicleId], references: [id])
-    scheduleRide   scheduleRide  @relation(fields: [scheduleRideId], references: [id])
-  bookedSeats BookingSeat[]
-}
-
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  CANCELLED
-}
-enum currency {
+enum Currency {
   USD
   SLSH
 }
@@ -149,32 +124,136 @@ enum paymentType {
   OFFLINE
   CASH
 }
+
+model Ride {
+  id       String   @id @default(uuid())
+  userId   String
+  routeId  String
+  fareUSD  Float    
+  fareSLSH Float
+
+
+  user     User   @relation(fields: [userId], references: [id])
+  route    Route  @relation(fields: [routeId], references: [id])
+  bookings Booking[]
+}
+
 model Booking {
-  id String @id @default(uuid())
-  userId         String
-  scheduleRideId String
-  seatsIds String[]
+  id         String   @id @default(uuid())
+  rideId     String
+  bookerId   String
+  currency   Currency   // chosen by booker
   name String
   phoneNumber String
   amount Int
   qty Int
   total_amount Int
   paymentType    paymentType
-  currency       currency
-  paymentStatus  PaymentStatus @default(PENDING)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  user          User         @relation(fields: [userId], references: [id])
-  scheduleRide  scheduleRide @relation(fields: [scheduleRideId], references: [id])
-  bookedSeats BookingSeat[]  
+  createdAt  DateTime   @default(now())
+
+
+  ride   Ride @relation(fields: [rideId], references: [id])
+  booker User @relation(fields: [bookerId], references: [id])
+}
+
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  targetType  String?                    // e.g. "EMPLOYEE", "BOOKING", "USER"
+  targetId    String?                    
+  action    String  
+  details   Json?
+   description String? 
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+enum Status {
+  active
+  inActive
+}
+
+enum Sex {
+  male
+  female
+}
+
+
+model Employee {
+  id String @id @default(uuid())
+  userId String
+  name String
+  phone String @unique
+  sex Sex
+  position String?
+  address String?
+  status Status  @default(active)
+  notes String?
+  salary Float?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  creator User @relation(fields: [userId], references: [id])
+  recipients MessageRecipient[]
+ pyroll Payroll[]
+}
+
+
+
+model Message {
+  id String @id @default(uuid())
+  message String
+  userId String
+  createdAt DateTime @default(now())
+  recipients MessageRecipient[]  
+  creator User @relation(fields: [userId], references: [id])
+  extraNumbers ExtraNumber[]   
+}
+
+model MessageRecipient {
+  id String @id @default(uuid())
+  userId String
+  employeeId String?
+  phone String                     
+  messageId String
+  sent Boolean @default(false)    
+   scheduledAt DateTime?   
+  message Message @relation(fields: [messageId], references: [id])
+  creator User @relation(fields: [userId], references: [id])
+  employee Employee? @relation(fields: [employeeId], references: [id])
+  @@index([phone, sent])         
+}
+
+
+model ExtraNumber {
+  id        String   @id @default(uuid())
+  phone     String
+  name      String?       
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id])
 
 }
 
-model BookingSeat {
-  id        String  @id @default(uuid())
-  bookingId String
-  seatId    String
 
-  booking Booking @relation(fields: [bookingId], references: [id])
-  seat    Seats   @relation(fields: [seatId], references: [id])
+model Payroll {
+  id          String   @id @default(uuid())
+  employeeId  String
+  baseSalary  Float
+  allowances  Float?
+  deductions  Float?
+  netPay      Float
+  status      PayrollStatus @default(PENDING)
+  paymentType paymentType
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  transactionId String? // from Waafi API
+ referenceId   String?  
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+enum PayrollStatus {
+  PENDING
+  PAID
+  FAILED
 }

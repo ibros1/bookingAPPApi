@@ -49,7 +49,18 @@ export const getAllRoutes = async (req: Request, res: Response) => {
       prisma.route.findMany({
         skip: (page - 1) * perPage,
         take: perPage,
-        include: { createdUser: true }, // include user details
+        include: {
+          createdUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              profilePhoto: true,
+              address: true,
+            },
+          },
+        }, // include user details
         orderBy: { updatedAt: "desc" }, // optional: latest updated first
       }),
       prisma.route.count(),
@@ -76,7 +87,18 @@ export const getOneRoute = async (req: Request, res: Response) => {
     const { routeId } = req.params;
     const route = await prisma.route.findUnique({
       where: { id: routeId },
-      include: { createdUser: true },
+      include: {
+        createdUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            profilePhoto: true,
+            address: true,
+          },
+        },
+      },
     });
 
     if (!route)

@@ -9,19 +9,14 @@ import {
 
 const router = express.Router();
 
-// POST: Create a route
-router.post("/", createRoute);
+router.post("/create", createRoute);
 
-// GET: Get all routes (with pagination ?page=1&limit=10)
-router.get("/", getAllRoutes);
+router.get("/list", getAllRoutes);
 
-// GET: Get a single route by ID
 router.get("/:routeId", getOneRoute);
 
-// PUT: Update a route
-router.put("/", updateRoute);
+router.put("/update", updateRoute);
 
-// DELETE: Delete a route by ID
-router.delete("/:routeId", deleteRoute);
+router.delete("/delete/:routeId", deleteRoute);
 
 export default router;
