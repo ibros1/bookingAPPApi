@@ -10,7 +10,7 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-prisma.$use(async (params, next) => {
+prisma.$use(async (params: any, next: any) => {
   const result = await next(params);
 
   if (["create", "update", "delete"].includes(params.action)) {
