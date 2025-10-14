@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node dist/index.js",
-    "dev": "nodemon src/index.ts",
-    "build": "prisma generate && tsc",
-    "vercel-build": "prisma generate && tsc",
-    "migrate": "npx prisma migrate dev",
-    "postinstall": "prisma generate"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "nodemon src/server.ts",
+    "migrate": "npx prisma migrate dev"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
   "dependencies": {
     "@adiwajshing/baileys": "^3.2.0",
     "@prisma/client": "^6.16.3",
@@ -19,7 +20,7 @@
     "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "firebase-admin": "^13.5.0",
@@ -43,13 +44,11 @@
     "@types/express-session": "^1.18.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
-    "@types/nodemailer": "^7.0.2",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/pino": "^7.0.4",
     "@types/qrcode-terminal": "^0.12.2",
-    "prisma": "^6.16.3",
-    "ts-node": "^10.9.2"
+    "prisma": "^6.16.3"
   },
   "nodemonConfig": {
     "watch": [
