@@ -1,65 +1,57 @@
-import {
-  AuthenticationState,
-  BufferJSON,
-  initAuthCreds,
-  proto,
-  SignalKeyStore,
-  SignalDataTypeMap,
-} from "@whiskeysockets/baileys";
-import * as fs from "fs";
+// src/utils/useSingleFileAuthState.ts
+import { readFileSync, writeFileSync, existsSync } from "fs";
+import { initAuthCreds, BufferJSON } from "@whiskeysockets/baileys";
 
-export default async function useSingleFileAuthState(file: string): Promise<{
-  state: AuthenticationState;
-  saveCreds: () => void;
-}> {
-  let creds: AuthenticationState["creds"];
+export default async function useSingleFileAuthState(filePath: string) {
+  let creds: ReturnType<typeof initAuthCreds>;
+  let keys: any = {};
 
-  // strictly typed keys
-  let keys: {
-    [K in keyof SignalDataTypeMap]?: Record<string, SignalDataTypeMap[K]>;
-  };
-
-  if (fs.existsSync(file)) {
-    const data = JSON.parse(
-      fs.readFileSync(file, { encoding: "utf-8" }),
-      BufferJSON.reviver
-    );
-    creds = data.creds;
-    keys = data.keys;
-  } else {
+  // --- Safe read (recover if JSON invalid)
+  try {
+    if (existsSync(filePath)) {
+      const data = readFileSync(filePath, { encoding: "utf-8" });
+      const parsed = JSON.parse(data, BufferJSON.reviver);
+      creds = parsed.creds || initAuthCreds();
+      keys = parsed.keys || {};
+    } else {
+      creds = initAuthCreds();
+    }
+  } catch (error) {
+    console.warn("⚠️ Auth file corrupted, resetting session:", error);
     creds = initAuthCreds();
     keys = {};
   }
 
-  const saveState = () => {
-    fs.writeFileSync(
-      file,
-      JSON.stringify({ creds, keys }, BufferJSON.replacer, 2)
-    );
-  };
-
-  const keyStore: SignalKeyStore = {
-    get: (type, ids) => {
-      const result: any = {};
-      for (const id of ids) {
-        result[id] = keys[type]?.[id];
-      }
-      return result;
-    },
-    set: (data) => {
-      for (const type of Object.keys(data) as (keyof SignalDataTypeMap)[]) {
-        if (!keys[type]) keys[type] = {};
-        Object.assign(keys[type]!, data[type]);
-      }
-      saveState();
+  const state = {
+    creds,
+    keys: {
+      get: (type: string, ids: string[]) => {
+        return ids.reduce((dict, id) => {
+          const value = keys[type]?.[id];
+          if (value) dict[id] = value;
+          return dict;
+        }, {} as Record<string, any>);
+      },
+      set: (data: any) => {
+        for (const type in data) {
+          keys[type] = keys[type] || {};
+          Object.assign(keys[type], data[type]);
+        }
+        saveCreds();
+      },
     },
   };
 
-  return {
-    state: {
-      creds,
-      keys: keyStore,
-    },
-    saveCreds: saveState,
+  const saveCreds = () => {
+    try {
+      writeFileSync(
+        filePath,
+        JSON.stringify({ creds, keys }, BufferJSON.replacer, 2)
+      );
+    } catch (err) {
+      console.error("❌ Failed to save WhatsApp auth file:", err);
+    }
   };
+
+  return { state, saveCreds };
 }

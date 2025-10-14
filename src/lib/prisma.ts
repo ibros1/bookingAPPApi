@@ -1,21 +1,38 @@
-import { PrismaClient } from "../generated/prisma";
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export async function logActivity(
-  userId: string,
-  action: string,
-  details?: any
-) {
-  try {
-    await prisma.activityLog.create({
-      data: {
-        userId,
-        action: action.toUpperCase(),
-        details: details ? JSON.stringify(details) : null,
-      },
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ["query", "error", "warn"], // optional
+  });
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+prisma.$use(async (params, next) => {
+  const result = await next(params);
+
+  if (["create", "update", "delete"].includes(params.action)) {
+    console.log(`[DB LOG] ${params.model} ${params.action}`, {
+      data: params.args?.data,
+      where: params.args?.where,
     });
-  } catch (error) {
-    console.error("Failed to log activity:", error);
+
+    const userId = params.args?.data?.userId || params.args?.where?.userId;
+
+    if (userId) {
+      await prisma.activityLog.create({
+        data: {
+          userId,
+          action: `${params.model}_${params.action}`.toUpperCase(),
+          details: JSON.stringify(params.args),
+        },
+      });
+    }
   }
-}
+
+  return result;
+});
+
+export default prisma;

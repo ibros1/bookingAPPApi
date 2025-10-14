@@ -1,4 +1,3 @@
-// messaging/whatsapp.ts
 import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,

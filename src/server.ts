@@ -24,7 +24,11 @@ app.use(express.urlencoded({ extended: true }));
 // Middleware order is important!
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:7000"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:7000",
+      "https://booking-app-client-zeta.vercel.app",
+    ],
     credentials: true,
   })
 );
