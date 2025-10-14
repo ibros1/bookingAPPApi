@@ -1,14 +1,19 @@
 import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
+  WASocket,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import useSingleFileAuthState from "../src/utils/useSingleFileAuthState";
 
-let sock: ReturnType<typeof makeWASocket> | undefined;
+// Global WhatsApp socket instance
+let sock: WASocket | undefined;
 
-export const initWhatsApp = async () => {
+/**
+ * Initialize WhatsApp connection using Baileys
+ */
+export const initWhatsApp = async (): Promise<WASocket> => {
   const { state, saveCreds } = await useSingleFileAuthState("auth_info.json");
   const { version } = await fetchLatestBaileysVersion();
 
@@ -16,11 +21,13 @@ export const initWhatsApp = async () => {
     auth: state,
     version,
     logger: pino({ level: "error" }),
-    printQRInTerminal: false,
+    printQRInTerminal: false, // We handle QR display manually
   });
 
+  // Save updated credentials when they change
   sock.ev.on("creds.update", saveCreds);
 
+  // Handle connection updates
   sock.ev.on("connection.update", (update) => {
     const { connection, qr, lastDisconnect } = update;
 
@@ -48,9 +55,15 @@ export const initWhatsApp = async () => {
   return sock;
 };
 
-export const sendBulkWhatsApp = async (numbers: string[], message: string) => {
+/**
+ * Send a WhatsApp message to multiple numbers
+ */
+export const sendBulkWhatsApp = async (
+  numbers: string[],
+  message: string
+): Promise<void> => {
   if (!sock)
-    throw new Error("WhatsApp not initialized. Call initWhatsApp first.");
+    throw new Error("WhatsApp not initialized. Call initWhatsApp() first.");
 
   for (const num of numbers) {
     try {
