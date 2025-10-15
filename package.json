@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "build": "tsc",
+    "build": "npm run generate && tsc",
+    "generate": "npx prisma generate",
     "start": "node dist/server.js",
+    "postinstall": "npm run generate",
     "migrate": "npx prisma migrate deploy"
   },
   "keywords": [],
