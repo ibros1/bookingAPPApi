@@ -2,23 +2,22 @@
 
 {
   "compilerOptions": {
-    // 1. MUST be set to a modern target (ES2022 or higher is best practice)
-    "target": "ES2022",
+    // Set target to a modern version for better support of async/await features
+    "target": "ES2020",
 
-    // 2. Set module and moduleResolution to NodeNext or Node20
-    // This tells TypeScript how to resolve imports/exports in a modern Node environment.
-    // It enables Top-Level await and handles CJS/ESM interop better.
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    // Keep 'commonjs' as the module output format, but ensure interop is enabled
+    "module": "commonjs",
 
-    // Keep your existing settings
     "outDir": "dist",
     "rootDir": ".",
     "strict": true,
 
-    // Crucial for allowing CJS to talk to ESM packages like Baileys
+    // Crucial for resolving CJS issues when consuming ESM packages
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    // Highly recommended when using newer Node.js features and interop
+    "moduleResolution": "Node" // or "NodeNext" if you prefer
   },
   "include": [
     "src/**/*",
