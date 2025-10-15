@@ -1,19 +1,29 @@
-import makeWASocket, {
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  WASocket,
-} from "@whiskeysockets/baileys";
+// messaging/whatsApp.ts
+
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import useSingleFileAuthState from "../src/utils/useSingleFileAuthState";
 
-// Global WhatsApp socket instance
-let sock: WASocket | undefined;
+// Global WhatsApp socket instance. We use 'any' since the Baileys types
+// will be imported dynamically inside the function.
+let sock: any;
 
 /**
  * Initialize WhatsApp connection using Baileys
  */
-export const initWhatsApp = async (): Promise<WASocket> => {
+export const initWhatsApp = async (): Promise<any> => {
+  // --- START: Dynamic Import Block to resolve ERR_REQUIRE_ESM ---
+  const Baileys = await import("@whiskeysockets/baileys");
+
+  // Destructure the needed exports from the dynamically loaded module
+  const {
+    default: makeWASocket,
+    DisconnectReason,
+    fetchLatestBaileysVersion,
+    WASocket, // Used for typing, although we use 'any' above
+  } = Baileys as any;
+  // --- END: Dynamic Import Block ---
+
   const { state, saveCreds } = await useSingleFileAuthState("auth_info.json");
   const { version } = await fetchLatestBaileysVersion();
 
@@ -21,14 +31,15 @@ export const initWhatsApp = async (): Promise<WASocket> => {
     auth: state,
     version,
     logger: pino({ level: "error" }),
-    printQRInTerminal: false, // We handle QR display manually
+    printQRInTerminal: false,
   });
 
   // Save updated credentials when they change
   sock.ev.on("creds.update", saveCreds);
 
   // Handle connection updates
-  sock.ev.on("connection.update", (update) => {
+  sock.ev.on("connection.update", (update: any) => {
+    // Use 'any' for update if needed
     const { connection, qr, lastDisconnect } = update;
 
     if (qr) {
