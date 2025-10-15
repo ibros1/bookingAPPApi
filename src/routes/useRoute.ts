@@ -15,7 +15,6 @@ import {
 import { authorize } from "../../middleWare/authorize";
 import { authenticateUser } from "../../middleWare/authenticate";
 import multer from "multer";
-import { requestOtp, verifyOtp } from "../controllers/authOTP";
 
 const router = Router();
 const upload = multer();
@@ -54,9 +53,5 @@ router.get(
   authorize(["ADMIN"]),
   getAllBookers
 );
-
-// OTP routes
-router.post("/request-otp", requestOtp);
-router.post("/verify-otp", verifyOtp);
 
 export default router;
