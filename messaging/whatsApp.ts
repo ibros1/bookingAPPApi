@@ -3,6 +3,7 @@
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import useSingleFileAuthState from "../src/utils/useSingleFileAuthState";
+import { existsSync, unlinkSync } from "fs";
 
 // Use a safe dynamic importer so TS in CJS doesn't transpile to require()
 const dynamicImport = new Function("specifier", "return import(specifier)") as (
@@ -12,6 +13,9 @@ const dynamicImport = new Function("specifier", "return import(specifier)") as (
 // Global WhatsApp socket instance. We use 'any' since the Baileys types
 // will be imported dynamically inside the function.
 let sock: any;
+let lastQr: string | null = null;
+let isConnected = false;
+let lastConnectedJid: string | null = null;
 
 /**
  * Initialize WhatsApp connection using Baileys
@@ -42,10 +46,14 @@ export const initWhatsApp = async (): Promise<any> => {
 
     if (qr) {
       console.log("📱 Scan this QR code with WhatsApp:");
-      qrcode.generate(qr, { small: true });
+      lastQr = qr;
+      try {
+        qrcode.generate(qr, { small: true });
+      } catch {}
     }
 
     if (connection === "close") {
+      isConnected = false;
       const shouldReconnect =
         (lastDisconnect?.error as any)?.output?.statusCode !==
         DisconnectReason.loggedOut;
@@ -54,14 +62,70 @@ export const initWhatsApp = async (): Promise<any> => {
         console.log("🔄 Reconnecting...");
         initWhatsApp();
       } else {
-        console.log("❌ Logged out. Delete auth_info.json and re-scan QR.");
+        console.log(
+          "❌ Logged out. Deleting auth_info.json and awaiting new QR."
+        );
+        try {
+          if (existsSync("auth_info.json")) unlinkSync("auth_info.json");
+        } catch {}
+        initWhatsApp();
       }
     } else if (connection === "open") {
       console.log("✅ WhatsApp connected!");
+      isConnected = true;
+      lastQr = null;
+      try {
+        lastConnectedJid = sock?.user?.id ?? null;
+      } catch {
+        lastConnectedJid = null;
+      }
     }
   });
 
   return sock;
+};
+
+export const getWhatsAppStatus = async (): Promise<{
+  connected: boolean;
+  qrDataUrl?: string;
+  qrString?: string;
+  lastConnectedJid?: string | null;
+}> => {
+  if (isConnected) return { connected: true, lastConnectedJid };
+  if (lastQr) {
+    try {
+      const QR = await (
+        new Function("specifier", "return import(specifier)") as any
+      )("qrcode");
+      const dataUrl = await QR.toDataURL(lastQr, { margin: 2, scale: 6 });
+      return {
+        connected: false,
+        qrDataUrl: dataUrl,
+        qrString: lastQr,
+        lastConnectedJid,
+      };
+    } catch {
+      return { connected: false, qrString: lastQr, lastConnectedJid };
+    }
+  }
+  return { connected: false, lastConnectedJid };
+};
+
+export const ensureWhatsAppStarted = async (): Promise<void> => {
+  if (!sock) {
+    await initWhatsApp();
+  }
+};
+
+export const resetWhatsAppSession = async (): Promise<void> => {
+  try {
+    if (existsSync("auth_info.json")) unlinkSync("auth_info.json");
+  } catch {}
+  lastQr = null;
+  isConnected = false;
+  lastConnectedJid = null;
+  sock = undefined;
+  await initWhatsApp();
 };
 
 /**
