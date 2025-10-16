@@ -3,10 +3,6 @@
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import useSingleFileAuthState from "../src/utils/useSingleFileAuthState";
-import {
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-} from "@whiskeysockets/baileys";
 
 // Global WhatsApp socket instance. We use 'any' since the Baileys types
 // will be imported dynamically inside the function.
@@ -17,12 +13,8 @@ let sock: any;
  */
 export const initWhatsApp = async (): Promise<any> => {
   // --- START: Dynamic Import Block to resolve ERR_REQUIRE_ESM ---
-  const Baileys = await import("@whiskeysockets/baileys");
-
-  // Destructure the needed exports from the dynamically loaded module
-  const { makeWASocket, useMultiFileAuthState } = await import(
-    "@whiskeysockets/baileys"
-  );
+  const { makeWASocket, fetchLatestBaileysVersion, DisconnectReason } =
+    await import("@whiskeysockets/baileys");
   // --- END: Dynamic Import Block ---
 
   const { state, saveCreds } = await useSingleFileAuthState("auth_info.json");
