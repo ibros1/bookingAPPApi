@@ -1,29 +1,15 @@
-// tsconfig.json
-
 {
   "compilerOptions": {
-    // Set target to a modern version for better support of async/await features
     "target": "ES2020",
-
-    // Keep 'commonjs' as the module output format, but ensure interop is enabled
     "module": "commonjs",
-
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": ".", // 👈 allow src + types
     "strict": true,
-
-    // Crucial for resolving CJS issues when consuming ESM packages
     "esModuleInterop": true,
     "skipLibCheck": true,
-
-    // Highly recommended when using newer Node.js features and interop
-    "moduleResolution": "Node" // or "NodeNext" if you prefer
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "nodemailer"]
   },
-  "include": [
-    "src/**/*",
-    "constants/**/*",
-    "messaging/**/*",
-    "middleWare/**/*",
-    "types/**/*"
-  ]
+  "include": ["src", "types"], // 👈 add types folder
+  "exclude": ["node_modules"]
 }
