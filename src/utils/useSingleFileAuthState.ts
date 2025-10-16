@@ -2,16 +2,17 @@
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 
-// Function to dynamically load Baileys only when needed
-const loadBaileys = async () => {
-  // This dynamic import is executed at runtime, resolving the CJS/ESM conflict.
-  return (await import("@whiskeysockets/baileys")) as any;
-};
+// Safe dynamic import to avoid TS downleveling to require() in CJS
+const dynamicImport = new Function("specifier", "return import(specifier)") as (
+  s: string
+) => Promise<any>;
 
 // Export an ASYNC factory function
 export default async function useSingleFileAuthState(filePath: string) {
   // --- Dynamic Load inside the ASYNC function ---
-  const { initAuthCreds, BufferJSON } = await loadBaileys();
+  const { initAuthCreds, BufferJSON } = await dynamicImport(
+    "@whiskeysockets/baileys"
+  );
   // --- END: Dynamic Load ---
 
   let creds: ReturnType<typeof initAuthCreds>;
