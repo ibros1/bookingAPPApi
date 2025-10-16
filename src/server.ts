@@ -34,10 +34,16 @@ app.use(
 );
 let whatsappReady = false;
 
-// Initialize WhatsApp
-initWhatsApp().then(() => {
-  whatsappReady = true;
-});
+// Initialize WhatsApp only when explicitly enabled
+if (process.env.ENABLE_WHATSAPP === "true") {
+  initWhatsApp()
+    .then(() => {
+      whatsappReady = true;
+    })
+    .catch((err) => {
+      console.error("Failed to init WhatsApp:", err);
+    });
+}
 
 app.post("/send-message", async (req, res) => {
   if (!whatsappReady) {
@@ -64,6 +70,15 @@ app.use("/api/employees", employeeRoute);
 app.use("/api/messages", messageRoute);
 app.use("/api/activity-logs", activityLogsRoute);
 
-app.listen(PORT, () => {
-  console.log(`server is running on port ${PORT} `);
-});
+// For Vercel serverless, export the app. For local dev, start the server.
+if (process.env.VERCEL) {
+  // Vercel will handle incoming requests using the exported default
+}
+
+export default app;
+
+if (!process.env.VERCEL) {
+  app.listen(PORT || 3000, () => {
+    console.log(`server is running on port ${PORT || 3000}`);
+  });
+}
