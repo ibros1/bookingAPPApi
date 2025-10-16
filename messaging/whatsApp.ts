@@ -5,11 +5,6 @@ import qrcode from "qrcode-terminal";
 import useSingleFileAuthState from "../src/utils/useSingleFileAuthState";
 import { existsSync, unlinkSync } from "fs";
 
-// Use a safe dynamic importer so TS in CJS doesn't transpile to require()
-const dynamicImport = new Function("specifier", "return import(specifier)") as (
-  s: string
-) => Promise<any>;
-
 // Global WhatsApp socket instance. We use 'any' since the Baileys types
 // will be imported dynamically inside the function.
 let sock: any;
@@ -23,7 +18,7 @@ let lastConnectedJid: string | null = null;
 export const initWhatsApp = async (): Promise<any> => {
   // --- START: Dynamic Import Block to resolve ERR_REQUIRE_ESM ---
   const { makeWASocket, fetchLatestBaileysVersion, DisconnectReason } =
-    await dynamicImport("@whiskeysockets/baileys");
+    await import("@whiskeysockets/baileys");
   // --- END: Dynamic Import Block ---
 
   const { state, saveCreds } = await useSingleFileAuthState("auth_info.json");
@@ -94,9 +89,8 @@ export const getWhatsAppStatus = async (): Promise<{
   if (isConnected) return { connected: true, lastConnectedJid };
   if (lastQr) {
     try {
-      const QR = await (
-        new Function("specifier", "return import(specifier)") as any
-      )("qrcode");
+      const qrMod = await import("qrcode");
+      const QR = (qrMod as any).default ?? qrMod;
       const dataUrl = await QR.toDataURL(lastQr, { margin: 2, scale: 6 });
       return {
         connected: false,
