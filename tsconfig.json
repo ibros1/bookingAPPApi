@@ -10,6 +10,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "nodemailer"]
   },
-  "include": ["src", "types"], // 👈 add types folder
+  "include": ["src", "types", "messaging"], // include messaging for dist build
   "exclude": ["node_modules"]
 }
