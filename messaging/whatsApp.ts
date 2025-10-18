@@ -1,10 +1,10 @@
 // messaging/whatsApp.ts
 
 import pino from "pino";
-import qrcode from "qrcode-terminal";
+
 import useSingleFileAuthState from "../src/utils/useSingleFileAuthState";
 import { existsSync, unlinkSync } from "fs";
-
+import qrcode from "qrcode-terminal";
 // Global WhatsApp socket instance. We use 'any' since the Baileys types
 // will be imported dynamically inside the function.
 let sock: any;

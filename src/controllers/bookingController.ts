@@ -3,6 +3,7 @@ import { Currency, paymentType, PrismaClient } from "../generated/prisma";
 import { iCreatedBooking } from "../../types/booking";
 import { sendBulkWhatsApp } from "../../messaging/whatsApp";
 import { logActivity } from "../../middleWare/prismaLogger";
+import { authRequest } from "../../types/request";
 
 const prisma = new PrismaClient();
 
@@ -224,6 +225,167 @@ export const getAllBookings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("GetAllBookings Error:", error);
+    return res.status(500).json({
+      isSuccess: false,
+      message: "Server error",
+    });
+  }
+};
+
+// get my bookings
+export const getMyBookings = async (req: authRequest, res: Response) => {
+  try {
+    // Ensure the logged-in user's ID is available
+    if (!req.userId) {
+      return res.status(401).json({
+        isSuccess: false,
+        message: "Unauthorized: No user ID found in request",
+      });
+    }
+
+    // Validate user exists and get user details
+    const booker = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    if (!booker) {
+      return res.status(404).json({
+        isSuccess: false,
+        message: "User not found",
+      });
+    }
+
+    // Additional validation: Check if the user ID format is valid UUID
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(req.userId)) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: "Invalid user ID format",
+      });
+    }
+
+    // Pagination
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const perPage = Math.max(1, parseInt(req.query.perPage as string) || 10);
+
+    // Fetch user's bookings only
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany({
+        skip: (page - 1) * perPage,
+        take: perPage,
+        where: { bookerId: req.userId }, // ✅ filter by logged-in user
+        include: {
+          ride: {
+            include: { route: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+
+      prisma.booking.count({
+        where: { bookerId: req.userId }, // ✅ count only this user's bookings
+      }),
+    ]);
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        isSuccess: false,
+        message: "No bookings found for this user",
+      });
+    }
+
+    const totalPages = Math.ceil(total / perPage);
+
+    return res.status(200).json({
+      isSuccess: true,
+      message: `Found ${bookings.length} bookings for user ${booker.name}`,
+      user: {
+        id: booker.id,
+        name: booker.name,
+        phone: booker.phone,
+        role: booker.role,
+      },
+      bookings,
+      meta: {
+        total,
+        page,
+        perPage,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error("getMyBookings Error:", error);
+    res.status(500).json({ isSuccess: false, message: "Server error" });
+  }
+};
+
+// getOneBooking
+export const getOneBooking = async (req: Request, res: Response) => {
+  try {
+    const { bookingId } = req.params;
+
+    // ---------------- Validate Booking ID ----------------
+    if (!bookingId) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: "Booking ID is required",
+      });
+    }
+
+    // Validate UUID format
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(bookingId)) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: "Invalid booking ID format",
+      });
+    }
+
+    // ---------------- Fetch Booking ----------------
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        ride: {
+          include: { route: true },
+        },
+        booker: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+            profilePhoto: true,
+            address: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        isSuccess: false,
+        message: "Booking not found",
+      });
+    }
+
+    // ---------------- Response ----------------
+    return res.status(200).json({
+      isSuccess: true,
+      message: "Booking retrieved successfully",
+      booking,
+    });
+  } catch (error) {
+    console.error("getOneBooking Error:", error);
     return res.status(500).json({
       isSuccess: false,
       message: "Server error",

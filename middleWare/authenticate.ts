@@ -1,13 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET_KEY } from "../config/config";
-
-export interface AuthRequest extends Request {
-  userId?: string;
-}
+import { authRequest } from "../types/request";
 
 export const authenticateUser = (
-  req: AuthRequest,
+  req: authRequest,
   res: Response,
   next: NextFunction
 ) => {
