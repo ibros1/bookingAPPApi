@@ -123,22 +123,41 @@ export const resetWhatsAppSession = async (): Promise<void> => {
 };
 
 /**
- * Send a WhatsApp message to multiple numbers
+ * Send a WhatsApp message to multiple numbers with better error handling
  */
 export const sendBulkWhatsApp = async (
   numbers: string[],
   message: string
-): Promise<void> => {
-  if (!sock)
+): Promise<{ success: number; failed: number; errors: string[] }> => {
+  if (!sock) {
     throw new Error("WhatsApp not initialized. Call initWhatsApp() first.");
+  }
+
+  const results = { success: 0, failed: 0, errors: [] as string[] };
 
   for (const num of numbers) {
     try {
-      const jid = num.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+      // Clean and format phone number
+      const cleanNumber = num.replace(/[^0-9]/g, "");
+      if (!cleanNumber || cleanNumber.length < 10) {
+        results.failed++;
+        results.errors.push(`Invalid phone number: ${num}`);
+        continue;
+      }
+
+      const jid = cleanNumber + "@s.whatsapp.net";
       await sock.sendMessage(jid, { text: message });
+      results.success++;
       console.log(`✅ Sent message to ${num}`);
     } catch (err) {
-      console.error(`❌ Failed to send message to ${num}:`, err);
+      results.failed++;
+      const errorMsg = `Failed to send to ${num}: ${
+        err instanceof Error ? err.message : "Unknown error"
+      }`;
+      results.errors.push(errorMsg);
+      console.error(`❌ ${errorMsg}`);
     }
   }
+
+  return results;
 };

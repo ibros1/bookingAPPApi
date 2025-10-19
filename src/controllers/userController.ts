@@ -9,6 +9,7 @@ import {
 } from "../../types/user";
 import { generateToken } from "../../helpers/jwt"; // Only access token
 import { authRequest } from "../../types/request";
+import { logActivity } from "../../middleWare/prismaLogger";
 
 const prisma = new PrismaClient();
 
@@ -42,6 +43,13 @@ export const registerUser = async (req: Request, res: Response) => {
         password: hashedPassword,
         address,
       },
+    });
+
+    // Log user registration activity
+    await logActivity(newUser.id, "USER_REGISTERED", "USER", newUser.id, {
+      message: `User ${name} registered successfully`,
+      userPhone: phone,
+      userEmail: email,
     });
 
     return res.json({
@@ -96,55 +104,8 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 };
 
-/* ---------------- UPDATE USER ---------------- */
-export const updateUser = async (req: Request, res: Response) => {
-  try {
-    const data: iUpdatedUser = req.body;
-
-    if (!data.id) {
-      return res
-        .status(400)
-        .json({ isSuccess: false, message: "User ID is required" });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: data.id } });
-    if (!user) {
-      return res
-        .status(404)
-        .json({ isSuccess: false, message: "User not found" });
-    }
-
-    let hashedPassword = user.password;
-    if (data.password) {
-      hashedPassword = await argon2.hash(data.password);
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { id: data.id },
-      data: {
-        name: data.name ?? user.name,
-        phone: data.phone ?? user.phone,
-        email: data.email ?? user.email,
-        password: hashedPassword,
-        profilePhoto: data.profilePhoto ?? user.profilePhoto,
-        isActive: data.isActive ?? user.isActive,
-      },
-    });
-
-    const { password, ...rest } = updatedUser;
-    res.status(200).json({
-      isSuccess: true,
-      message: "User updated successfully",
-      user: rest,
-    });
-  } catch (error) {
-    console.error("Update User Error:", error);
-    res.status(500).json({ isSuccess: false, message: "Server error" });
-  }
-};
-
 /* ---------------- UPDATE ROLE ---------------- */
-export const updateRole = async (req: Request, res: Response) => {
+export const updateRole = async (req: authRequest, res: Response) => {
   try {
     const data: iUpdatedRole = req.body;
 
@@ -156,6 +117,14 @@ export const updateRole = async (req: Request, res: Response) => {
     const user = await prisma.user.update({
       where: { phone: data.phone },
       data: { role: data.role },
+    });
+
+    // Log role update activity
+    await logActivity(user.id, "USER_ROLE_UPDATED", "USER", user.id, {
+      message: `User role updated from ${user.role} to ${data.role}`,
+      userPhone: data.phone,
+      newRole: data.role,
+      updatedBy: req.userId || "system",
     });
 
     res.status(200).json({
@@ -280,6 +249,149 @@ export const getAllBookers = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Get All bookers Error:", error);
+    res.status(500).json({ isSuccess: false, message: "Server error" });
+  }
+};
+
+/* ---------------- DELETE USER ---------------- */
+export const deleteUser = async (req: authRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ isSuccess: false, message: "User ID is required" });
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      return res
+        .status(404)
+        .json({ isSuccess: false, message: "User not found" });
+    }
+
+    // Log user deletion activity before deleting
+    await logActivity(
+      existingUser.id,
+      "USER_DELETED",
+      "USER",
+      existingUser.id,
+      {
+        message: `User ${existingUser.name} deleted from system`,
+        deletedUser: {
+          name: existingUser.name,
+          phone: existingUser.phone,
+          email: existingUser.email,
+          role: existingUser.role,
+        },
+        deletedBy: req.userId || "system",
+      }
+    );
+
+    // Delete the user
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    res.status(200).json({
+      isSuccess: true,
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete User Error:", error);
+    res.status(500).json({ isSuccess: false, message: "Server error" });
+  }
+};
+
+/* ---------------- UPDATE USER ---------------- */
+export const updateUser = async (req: authRequest, res: Response) => {
+  try {
+    const { userId, name, email, phone, address, isActive } = req.body;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ isSuccess: false, message: "User ID is required" });
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      return res
+        .status(404)
+        .json({ isSuccess: false, message: "User not found" });
+    }
+
+    // Check if phone is being updated and if it's already taken
+    if (phone && phone !== existingUser.phone) {
+      const phoneExists = await prisma.user.findUnique({
+        where: { phone },
+      });
+      if (phoneExists) {
+        return res
+          .status(400)
+          .json({ isSuccess: false, message: "Phone number already exists" });
+      }
+    }
+
+    // Check if email is being updated and if it's already taken
+    if (email && email !== existingUser.email) {
+      const emailExists = await prisma.user.findUnique({
+        where: { email },
+      });
+      if (emailExists) {
+        return res
+          .status(400)
+          .json({ isSuccess: false, message: "Email already exists" });
+      }
+    }
+
+    // Update the user
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(name && { name }),
+        ...(email && { email }),
+        ...(phone && { phone }),
+        ...(address && { address }),
+        ...(isActive !== undefined && { isActive }),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        address: true,
+        role: true,
+        isActive: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // Log user update activity
+    await logActivity(updatedUser.id, "USER_UPDATED", "USER", updatedUser.id, {
+      message: `User ${updatedUser.name} profile updated`,
+      updatedFields: { name, email, phone, address, isActive },
+      updatedBy: req.userId || "system",
+    });
+
+    res.status(200).json({
+      isSuccess: true,
+      message: "User updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update User Error:", error);
     res.status(500).json({ isSuccess: false, message: "Server error" });
   }
 };

@@ -4,14 +4,24 @@ const prisma = new PrismaClient();
 
 export const getAllActivityLogs = async (req: Request, res: Response) => {
   try {
-    const page = Math.ceil(parseInt(req.query.page as string) || 1);
-    const perPage = Math.ceil(parseInt(req.query.perPage as string) || 10);
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const perPage = Math.max(1, parseInt(req.query.perPage as string) || 10);
     const [activityLogs, total] = await Promise.all([
-      await prisma.activityLog.findMany({
+      prisma.activityLog.findMany({
         skip: (page - 1) * perPage,
         take: perPage,
         orderBy: {
           createdAt: "desc",
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              phone: true,
+            },
+          },
         },
       }),
       prisma.activityLog.count(),
@@ -24,6 +34,7 @@ export const getAllActivityLogs = async (req: Request, res: Response) => {
       activityLogs,
       total,
       page,
+      perPage,
       totalPages,
     });
   } catch (error) {

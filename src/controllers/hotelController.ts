@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "../generated/prisma";
 import { iCreatedHotel, iUpdatedHotel } from "../../types/hotels";
+import { logActivity } from "../../middleWare/prismaLogger";
+import { authRequest } from "../../types/request";
 
 const prisma = new PrismaClient();
 
 // Create Hotel
-export const createHotel = async (req: Request, res: Response) => {
+export const createHotel = async (req: authRequest, res: Response) => {
   try {
     const data: iCreatedHotel = req.body;
     if (!data.name || !data.addressId) {
@@ -29,6 +31,21 @@ export const createHotel = async (req: Request, res: Response) => {
     const hotel = await prisma.hotel.create({
       data,
     });
+
+    // Log hotel creation activity
+    await logActivity(
+      (req as authRequest).userId || "system",
+      "HOTEL_CREATED",
+      "HOTEL",
+      hotel.id,
+      {
+        message: `Hotel ${hotel.name} created successfully`,
+        hotelDetails: {
+          name: hotel.name,
+          addressId: hotel.addressId,
+        },
+      }
+    );
 
     res.status(201).json({
       isSuccess: true,

@@ -158,7 +158,37 @@ Thank you for choosing us!
         : Promise.resolve(),
     ]);
 
+    // Log WhatsApp messaging activity
+    await logActivity(
+      data.bookerId,
+      "WHATSAPP_MESSAGES_SENT",
+      "BOOKING",
+      booking.id,
+      {
+        message: `WhatsApp notifications sent for booking ${booking.id}`,
+        recipients: {
+          admins: admins.length,
+          officers: officersForAddress.length,
+          client: data.phoneNumber ? 1 : 0,
+        },
+      }
+    );
+
     // ---------------- Activity Logs ----------------
+    await logActivity(data.bookerId, "BOOKING_CREATED", "BOOKING", booking.id, {
+      message: `New booking created for ${data.name}`,
+      bookingDetails: {
+        rideId: data.rideId,
+        amount: booking.total_amount,
+        currency: booking.currency,
+        qty: booking.qty,
+        paymentType: data.paymentType,
+      },
+      clientInfo: {
+        name: data.name,
+        phone: data.phoneNumber,
+      },
+    });
 
     // ---------------- Response ----------------
     return res.status(201).json({

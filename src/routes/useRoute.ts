@@ -10,6 +10,7 @@ import {
   getMe,
   getAllOfficers,
   getAllBookers,
+  deleteUser,
 } from "../controllers/userController";
 
 import { authorize } from "../../middleWare/authorize";
@@ -52,6 +53,12 @@ router.get(
   authenticateUser,
   authorize(["ADMIN"]),
   getAllBookers
+);
+router.delete(
+  "/delete/:userId",
+  authenticateUser,
+  authorize(["ADMIN"]),
+  deleteUser
 );
 
 export default router;
